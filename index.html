@@ -1,2 +1,32 @@
-<h1 style="text-align:center;margin-top:20%;font-size:80px">那还说啥了</h1>
-<p style="text-align:center;font-size:60px;color:#42a5f5">云神nb</p>
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body {
+    margin: 0; height: 100vh;
+    background: linear-gradient(45deg, red, orange, yellow, green, cyan, blue, violet);
+    background-size: 400% 400%;
+    animation: rainbow 2s ease infinite;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    font-family: sans-serif;
+  }
+  @keyframes rainbow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  h1 { font-size: 100px; color: white; text-shadow: 0 0 20px black; margin: 0; }
+  p { font-size: 70px; color: yellow; text-shadow: 0 0 15px black; margin: 20px 0 0 0;
+      animation: bounce 0.5s ease infinite alternate; }
+  @keyframes bounce {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-30px); }
+  }
+</style>
+</head>
+<body>
+  <h1>那还说啥了</h1>
+  <p>云神nb</p>
+</body>
+</html>
