@@ -2,31 +2,75 @@
 <html>
 <head>
 <style>
-  body {
-    margin: 0; height: 100vh;
-    background: linear-gradient(45deg, red, orange, yellow, green, cyan, blue, violet);
-    background-size: 400% 400%;
-    animation: rainbow 2s ease infinite;
-    display: flex; flex-direction: column;
-    justify-content: center; align-items: center;
-    font-family: sans-serif;
-  }
-  @keyframes rainbow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
-  h1 { font-size: 100px; color: white; text-shadow: 0 0 20px black; margin: 0; }
-  p { font-size: 70px; color: yellow; text-shadow: 0 0 15px black; margin: 20px 0 0 0;
-      animation: bounce 0.5s ease infinite alternate; }
-  @keyframes bounce {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(-30px); }
-  }
+  body { margin: 0; height: 100vh; background: #222; overflow: hidden; cursor: crosshair; }
+  #player { width: 40px; height: 40px; background: #0ff; border-radius: 50%;
+            position: absolute; left: 50%; top: 80%; transform: translate(-50%, -50%);
+            box-shadow: 0 0 20px #0ff; z-index: 10; }
+  .bullet { width: 10px; height: 30px; background: #e94560; position: absolute;
+            border-radius: 5px; }
+  .enemy { width: 50px; height: 50px; background: #ff0; border-radius: 50%;
+           position: absolute; font-size: 20px; display: flex; align-items: center;
+           justify-content: center; color: #000; font-weight: bold; }
+  #score { color: white; font-size: 30px; position: absolute; top: 20px; left: 20px; z-index: 10; }
+  #end { display: none; position: absolute; top: 50%; left: 50%;
+         transform: translate(-50%,-50%); font-size: 100px; color: #e94560;
+         z-index: 20; text-align: center; }
 </style>
 </head>
 <body>
-  <h1>那还说啥了</h1>
-  <p>云神nb</p>
+  <div id="player"></div>
+  <div id="score">分数: 0</div>
+  <div id="end">那还说啥了<br>云神nb<br><span style="font-size:40px">点击重来</span></div>
+  <script>
+    const player = document.getElementById("player");
+    const scoreDiv = document.getElementById("score");
+    const endDiv = document.getElementById("end");
+    let px = window.innerWidth/2, score = 0, gameOver = false;
+    let enemies = [], bullets = [];
+    document.onmousemove = e => { if(!gameOver) px = e.clientX; player.style.left = px + "px"; };
+    document.onclick = () => {
+      if(gameOver) { location.reload(); return; }
+      const b = document.createElement("div"); b.className = "bullet";
+      b.style.left = px + "px"; b.style.top = window.innerHeight - 100 + "px";
+      document.body.appendChild(b); bullets.push({el:b, y:window.innerHeight-100});
+    };
+    function spawn() {
+      if(gameOver) return;
+      const e = document.createElement("div"); e.className = "enemy";
+      e.textContent = ["云","神","nb","🔥"][Math.floor(Math.random()*4)];
+      e.style.left = Math.random()*(window.innerWidth-50) + "px";
+      e.style.top = "-60px"; document.body.appendChild(e);
+      enemies.push({el:e, y:-60, speed:1+Math.random()*3});
+      setTimeout(spawn, 800 - score*5);
+    }
+    function loop() {
+      if(gameOver) return;
+      // bullets
+      for(let i=bullets.length-1; i>=0; i--) {
+        bullets[i].y -= 8; bullets[i].el.style.top = bullets[i].y + "px";
+        if(bullets[i].y < -30) { bullets[i].el.remove(); bullets.splice(i,1); continue; }
+        for(let j=enemies.length-1; j>=0; j--) {
+          const ex = parseFloat(enemies[j].el.style.left);
+          if(Math.abs(ex-px)<40 && Math.abs(enemies[j].y-bullets[i].y)<40) {
+            enemies[j].el.remove(); enemies.splice(j,1);
+            bullets[i].el.remove(); bullets.splice(i,1);
+            score++; scoreDiv.textContent = "分数: " + score;
+            break;
+          }
+        }
+      }
+      // enemies
+      for(let i=enemies.length-1; i>=0; i--) {
+        enemies[i].y += enemies[i].speed;
+        enemies[i].el.style.top = enemies[i].y + "px";
+        if(enemies[i].y > window.innerHeight) {
+          gameOver = true; endDiv.style.display = "block";
+          return;
+        }
+      }
+      requestAnimationFrame(loop);
+    }
+    spawn(); loop();
+  </script>
 </body>
 </html>
