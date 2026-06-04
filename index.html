@@ -1,267 +1,307 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<style>
-  body {
-    margin: 0; height: 100vh; background: #0a0a15;
-    display: flex; flex-direction: column;
-    justify-content: center; align-items: center;
-    font-family: monospace; color: #aaa;
-    overflow: hidden; touch-action: none;
-  }
-  canvas {
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px;
-    box-shadow: 0 0 30px rgba(100,180,255,0.15);
-  }
-  #ui {
-    margin-top: 12px; display: flex; gap: 20px;
-    align-items: center; font-size: 14px;
-  }
-  #score { color: #4af; font-size: 20px; }
-  #best { color: #888; }
-  button {
-    background: rgba(255,255,255,0.08); color: #ccc;
-    border: 1px solid rgba(255,255,255,0.15);
-    padding: 10px 20px; border-radius: 20px;
-    font-size: 14px; cursor: pointer; transition: 0.2s;
-  }
-  button:active { background: rgba(255,255,255,0.2); }
-  #mobile-controls {
-    display: none; margin-top: 10px;
-  }
-  .dpad {
-    display: grid; grid-template-columns: 70px 70px 70px;
-    grid-template-rows: 70px 70px 70px; gap: 4px;
-  }
-  .dpad button {
-    font-size: 24px; padding: 0; border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .dpad .empty { background: transparent; border: none; }
-  @media (max-width: 600px) {
-    #mobile-controls { display: block; }
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤪</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #111;
+            min-height: 100vh;
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* ========== 整体容器，约束水平范围 ========== */
+        .wrapper {
+            width: 100%;
+            max-width: 520px;
+            position: relative;
+            padding-top: 80px;
+        }
+
+        /* ========== 左上角标题，不超出 wrapper ========== */
+        .header {
+            position: absolute;
+            top: 24px;
+            left: 0;
+            z-index: 10;
+        }
+        .title {
+            font-size: 42px;
+            cursor: pointer;
+            user-select: none;
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+        .title:hover { transform: scale(1.15); }
+        .title:active { transform: scale(1.4); }
+
+        /* ========== 播放按钮，不超出 wrapper ========== */
+        .play-btn {
+            position: absolute;
+            top: 28px;
+            right: 0;
+            z-index: 10;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #1e1e1e;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #777;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .play-btn:hover {
+            background: #2a2a2a;
+            color: #ccc;
+        }
+        .play-btn.playing {
+            background: #2a2a2a;
+            color: #ccc;
+        }
+
+        /* ========== 隐藏的 iframe ========== */
+        .hidden-player {
+            position: fixed;
+            top: -100px;
+            left: -100px;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* ========== 留言板 ========== */
+        .message-list {
+            height: 55vh;
+            overflow-y: auto;
+            margin-bottom: 24px;
+            scroll-behavior: smooth;
+            background: rgba(255,255,255,0.012);
+            border-radius: 2px;
+            padding: 4px 0;
+            /* 微妙的顶部光晕渲染，不单调 */
+            box-shadow: inset 0 20px 40px -20px rgba(255,255,255,0.015);
+        }
+        .message-list::-webkit-scrollbar { width: 3px; }
+        .message-list::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.06);
+            border-radius: 2px;
+        }
+        .message-list::-webkit-scrollbar-track { background: transparent; }
+
+        .message-item {
+            padding: 12px 4px;
+            color: #999;
+            font-size: 15px;
+            line-height: 1.7;
+            word-break: break-word;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            animation: fadeIn 0.3s ease;
+            transition: color 0.3s;
+        }
+        .message-item:hover {
+            color: #bbb;
+        }
+        .message-item .time {
+            font-size: 11px;
+            color: #222;
+            display: block;
+            margin-top: 4px;
+            transition: color 0.3s;
+        }
+        .message-item:hover .time {
+            color: #333;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ========== 输入区 ========== */
+        .input-row {
+            display: flex;
+            gap: 10px;
+        }
+        .input-row input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            padding: 12px 4px;
+            color: #aaa;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .input-row input:focus {
+            border-bottom-color: rgba(255,255,255,0.2);
+        }
+        .input-row input::placeholder { color: #222; }
+
+        .input-row button {
+            background: transparent;
+            border: none;
+            color: #333;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            letter-spacing: 1px;
+            transition: color 0.3s;
+            white-space: nowrap;
+        }
+        .input-row button:hover { color: #888; }
+
+        /* ========== 底部状态 ========== */
+        .status {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 10px;
+            color: #1a1a1a;
+            letter-spacing: 1px;
+        }
+        .status.connected { color: #060; }
+    </style>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
-  <div id="ui">
-    <span id="score">🍎 0</span>
-    <span id="best">🏆 0</span>
-    <button onclick="restart()">重来</button>
-  </div>
-  <div id="mobile-controls">
-    <div class="dpad">
-      <button class="empty"></button>
-      <button onpointerdown="setDir(0,-1)">▲</button>
-      <button class="empty"></button>
-      <button onpointerdown="setDir(-1,0)">◀</button>
-      <button class="empty"></button>
-      <button onpointerdown="setDir(1,0)">▶</button>
-      <button class="empty"></button>
-      <button onpointerdown="setDir(0,1)">▼</button>
-      <button class="empty"></button>
+
+    <div class="wrapper">
+
+        <!-- 左上角标题 -->
+        <div class="header">
+            <span class="title" onclick="titleBounce()" title="点我">🤪</span>
+        </div>
+
+        <!-- 播放按钮 -->
+        <div class="play-btn" id="playBtn" onclick="togglePlay()" title="播放/暂停">
+            ▶
+        </div>
+
+        <!-- 隐藏的网易云 iframe -->
+        <div class="hidden-player">
+            <iframe id="musicFrame"
+                    src="https://music.163.com/outchain/player?type=2&id=2161785290&auto=0&height=66"
+                    width="330" height="86"
+                    frameborder="no">
+            </iframe>
+        </div>
+
+        <!-- 留言板 -->
+        <div class="message-list" id="messageList">
+            <div style="color:#1a1a1a;text-align:center;padding:60px 0;">加载中...</div>
+        </div>
+        <div class="input-row">
+            <input type="text" id="messageInput" placeholder="说点什么..." maxlength="200" />
+            <button onclick="sendMessage()">发送</button>
+        </div>
+        <div class="status" id="status">正在连接...</div>
+
     </div>
-  </div>
 
-  <script>
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    const scoreEl = document.getElementById("score");
-    const bestEl = document.getElementById("best");
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, push, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
-    const grid = 20;
-    const cols = 20;
-    const rows = 20;
-    const w = cols * grid;
-    const h = rows * grid;
-    canvas.width = w;
-    canvas.height = h;
-
-    let snake, dir, nextDir, food, score, best, alive, speed, timer;
-
-    function init() {
-      snake = [
-        {x: 10, y: 10},
-        {x: 9, y: 10},
-        {x: 8, y: 10},
-      ];
-      dir = {x: 1, y: 0};
-      nextDir = {x: 1, y: 0};
-      score = 0;
-      alive = true;
-      speed = 120;
-      placeFood();
-      updateScore();
-    }
-
-    function placeFood() {
-      do {
-        food = {
-          x: Math.floor(Math.random() * cols),
-          y: Math.floor(Math.random() * rows)
+        const firebaseConfig = {
+            apiKey: "AIzaSyC4t7z-gj04cmuytgZpN2WiAIevNOXx60w",
+            authDomain: "project-99373354443591401.firebaseapp.com",
+            databaseURL: "https://project-99373354443591401-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "project-99373354443591401",
+            storageBucket: "project-99373354443591401.firebasestorage.app",
+            messagingSenderId: "255729708739",
+            appId: "1:255729708739:web:debf265e4e3dccc689fc76"
         };
-      } while (snake.some(s => s.x === food.x && s.y === food.y));
-    }
 
-    function updateScore() {
-      scoreEl.textContent = "🍎 " + score;
-      if (score > best) {
-        best = score;
-        localStorage.setItem("snakeBest", best);
-      }
-      bestEl.textContent = "🏆 " + best;
-    }
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const messagesRef = ref(db, 'messages');
 
-    function setDir(dx, dy) {
-      if (!alive) return;
-      // 不能反向
-      if (dir.x === -dx && dir.y === -dy) return;
-      nextDir = {x: dx, y: dy};
-    }
+        const statusEl = document.getElementById('status');
 
-    function step() {
-      if (!alive) return;
-      dir = {x: nextDir.x, y: nextDir.y};
-      const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+        onValue(messagesRef, (snapshot) => {
+            const data = snapshot.val();
+            const messages = data ? Object.values(data) : [];
+            messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+            renderMessages(messages);
+            statusEl.textContent = '已连接';
+            statusEl.className = 'status connected';
+        }, () => {
+            statusEl.textContent = '连接失败';
+            statusEl.className = 'status';
+        });
 
-      // 穿墙
-      head.x = (head.x + cols) % cols;
-      head.y = (head.y + rows) % rows;
+        window.sendMessage = function() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text) return;
+            push(messagesRef, {
+                text: text,
+                time: new Date().toLocaleString('zh-CN'),
+                timestamp: Date.now()
+            });
+            input.value = '';
+            input.focus();
+        };
 
-      // 撞自己
-      if (snake.some(s => s.x === head.x && s.y === head.y)) {
-        alive = false;
-        draw();
-        return;
-      }
+        function renderMessages(messages) {
+            const list = document.getElementById('messageList');
+            if (messages.length === 0) {
+                list.innerHTML = '<div style="color:#1a1a1a;text-align:center;padding:60px 0;">还没有留言，来做第一个 🎈</div>';
+                return;
+            }
+            list.innerHTML = messages.slice().reverse().map(msg => `
+                <div class="message-item">
+                    ${escapeHtml(msg.text)}
+                    <span class="time">${msg.time || ''}</span>
+                </div>
+            `).join('');
+        }
 
-      snake.unshift(head);
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
-      if (head.x === food.x && head.y === food.y) {
-        score++;
-        updateScore();
-        placeFood();
-        speed = Math.max(50, 120 - score * 2);
-      } else {
-        snake.pop();
-      }
-      draw();
-      clearTimeout(timer);
-      timer = setTimeout(step, speed);
-    }
+        window.isPlaying = false;
+        window.togglePlay = function() {
+            const btn = document.getElementById('playBtn');
+            const iframe = document.getElementById('musicFrame');
+            if (window.isPlaying) {
+                iframe.src = iframe.src;
+                window.isPlaying = false;
+                btn.textContent = '▶';
+                btn.classList.remove('playing');
+            } else {
+                iframe.src = 'https://music.163.com/outchain/player?type=2&id=2161785290&auto=1&height=66';
+                window.isPlaying = true;
+                btn.textContent = '⏸';
+                btn.classList.add('playing');
+            }
+        };
 
-    function draw() {
-      // 背景
-      ctx.fillStyle = "#0a0a18";
-      ctx.fillRect(0, 0, w, h);
+        window.titleBounce = function() {
+            const title = document.querySelector('.title');
+            const rots = ['rotate(15deg)', 'rotate(-15deg)', 'rotate(25deg)', 'rotate(-25deg)', 'rotate(0deg)'];
+            title.style.transform = rots[Math.floor(Math.random() * rots.length)];
+            setTimeout(() => { title.style.transform = ''; }, 300);
+        };
 
-      // 网格线
-      ctx.strokeStyle = "rgba(255,255,255,0.03)";
-      ctx.lineWidth = 0.5;
-      for (let i = 0; i <= cols; i++) {
-        ctx.beginPath(); ctx.moveTo(i*grid, 0); ctx.lineTo(i*grid, h); ctx.stroke();
-      }
-      for (let i = 0; i <= rows; i++) {
-        ctx.beginPath(); ctx.moveTo(0, i*grid); ctx.lineTo(w, i*grid); ctx.stroke();
-      }
-
-      // 食物
-      const fx = food.x * grid + grid/2;
-      const fy = food.y * grid + grid/2;
-      ctx.fillStyle = "#ff4466";
-      ctx.shadowColor = "#ff4466";
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(fx, fy, grid/2 - 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-
-      // 蛇身
-      for (let i = snake.length - 1; i >= 0; i--) {
-        const s = snake[i];
-        const t = i / snake.length;
-        const r = Math.floor(60 + t * 150);
-        const g = Math.floor(180 - t * 100);
-        const b = Math.floor(240 - t * 140);
-        const alpha = 1 - t * 0.5;
-        ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
-        ctx.shadowColor = `rgba(${r},${g},${b},0.8)`;
-        ctx.shadowBlur = i === 0 ? 16 : 6;
-        const pad = i === 0 ? 1 : 2;
-        ctx.beginPath();
-        ctx.roundRect(s.x * grid + pad, s.y * grid + pad, grid - pad*2, grid - pad*2, 5);
-        ctx.fill();
-      }
-      ctx.shadowBlur = 0;
-
-      // 死亡覆盖
-      if (!alive) {
-        ctx.fillStyle = "rgba(0,0,0,0.6)";
-        ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 36px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText("GAME OVER", w/2, h/2 - 10);
-        ctx.font = "16px monospace";
-        ctx.fillStyle = "#aaa";
-        ctx.fillText("点击重来 / 按空格", w/2, h/2 + 30);
-      }
-    }
-
-    function restart() {
-      clearTimeout(timer);
-      init();
-      draw();
-      timer = setTimeout(step, speed);
-    }
-
-    // 键盘
-    document.addEventListener("keydown", (e) => {
-      e.preventDefault();
-      if (!alive && e.code === "Space") { restart(); return; }
-      if (e.code === "ArrowUp" || e.code === "KeyW") setDir(0, -1);
-      if (e.code === "ArrowDown" || e.code === "KeyS") setDir(0, 1);
-      if (e.code === "ArrowLeft" || e.code === "KeyA") setDir(-1, 0);
-      if (e.code === "ArrowRight" || e.code === "KeyD") setDir(1, 0);
-    });
-
-    // 触屏滑动
-    let touchStart = null;
-    canvas.addEventListener("touchstart", (e) => {
-      e.preventDefault();
-      if (!alive) { restart(); return; }
-      touchStart = {x: e.touches[0].clientX, y: e.touches[0].clientY};
-    });
-    canvas.addEventListener("touchmove", (e) => e.preventDefault());
-    canvas.addEventListener("touchend", (e) => {
-      if (!touchStart) return;
-      const dx = e.changedTouches[0].clientX - touchStart.x;
-      const dy = e.changedTouches[0].clientY - touchStart.y;
-      if (Math.abs(dx) > Math.abs(dy)) {
-        setDir(dx > 0 ? 1 : -1, 0);
-      } else {
-        setDir(0, dy > 0 ? 1 : -1);
-      }
-      touchStart = null;
-    });
-
-    // 点击重来
-    canvas.addEventListener("click", () => {
-      if (!alive) restart();
-    });
-
-    // 手机方向键按钮防抖
-    document.querySelectorAll(".dpad button").forEach(btn => {
-      btn.addEventListener("pointerdown", (e) => e.preventDefault());
-    });
-
-    best = parseInt(localStorage.getItem("snakeBest") || "0");
-    init();
-    draw();
-    timer = setTimeout(step, speed);
-  </script>
+        document.getElementById('messageInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') window.sendMessage();
+        });
+    </script>
 </body>
 </html>
