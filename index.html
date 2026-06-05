@@ -45,7 +45,6 @@
         .title:hover { transform: scale(1.15); }
         .title:active { transform: scale(1.4); }
 
-        /* 模式切换按钮 */
         .mode-tabs {
             display: flex;
             gap: 6px;
@@ -65,7 +64,6 @@
         .mode-tab:hover { color: #999; }
         .mode-tab.active { color: #ccc; }
 
-        /* 播放按钮 */
         .play-btn {
             position: absolute;
             top: 28px;
@@ -82,14 +80,9 @@
             transition: all 0.2s;
             user-select: none;
         }
-        .play-btn:hover {
-            background: #2a2a2a;
-        }
-        .play-btn.playing {
-            background: #2a2a2a;
-        }
+        .play-btn:hover { background: #2a2a2a; }
+        .play-btn.playing { background: #2a2a2a; }
 
-        /* 播放图标：三角形 */
         .play-icon {
             width: 0;
             height: 0;
@@ -99,14 +92,9 @@
             margin-left: 3px;
             transition: border-color 0.2s;
         }
-        .play-btn:hover .play-icon {
-            border-left-color: #ccc;
-        }
-        .play-btn.playing .play-icon {
-            border-left-color: #ccc;
-        }
+        .play-btn:hover .play-icon { border-left-color: #ccc; }
+        .play-btn.playing .play-icon { border-left-color: #ccc; }
 
-        /* 暂停图标：两条竖线 */
         .pause-icon {
             display: flex;
             gap: 5px;
@@ -118,14 +106,9 @@
             border-radius: 1px;
             transition: background 0.2s;
         }
-        .play-btn:hover .pause-bar {
-            background: #ccc;
-        }
-        .play-btn.playing .pause-bar {
-            background: #ccc;
-        }
+        .play-btn:hover .pause-bar { background: #ccc; }
+        .play-btn.playing .pause-bar { background: #ccc; }
 
-        /* 内容区域 */
         .content-area {
             min-height: 55vh;
             overflow-y: auto;
@@ -143,7 +126,6 @@
         }
         .content-area::-webkit-scrollbar-track { background: transparent; }
 
-        /* 留言板 */
         .message-board { display: block; }
         .memo-board { display: none; }
 
@@ -167,7 +149,6 @@
         }
         .message-item:hover .time { color: #777; }
 
-        /* 备忘录条目 */
         .memo-item {
             display: flex;
             align-items: flex-start;
@@ -194,16 +175,14 @@
             opacity: 0;
             transition: opacity 0.3s;
         }
-        .memo-text .copy-feedback.show {
-            opacity: 1;
-        }
+        .memo-text .copy-feedback.show { opacity: 1; }
         .memo-delete {
             background: transparent;
             border: none;
             color: #444;
             cursor: pointer;
             font-size: 16px;
-            padding: 2 6px;
+            padding: 2px 6px;
             transition: color 0.3s;
             flex-shrink: 0;
             line-height: 1.7;
@@ -215,7 +194,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* 输入区 */
         .input-row {
             display: flex;
             gap: 10px;
@@ -250,7 +228,6 @@
         }
         .input-row button:hover { color: #999; }
 
-        /* 底部 */
         .status {
             text-align: center;
             margin-top: 12px;
@@ -281,7 +258,6 @@
             </div>
         </div>
 
-        <!-- 播放按钮 -->
         <div class="play-btn" id="playBtn" onclick="togglePlay()" title="播放/暂停">
             <div class="play-icon" id="playIcon"></div>
             <div class="pause-icon" id="pauseIcon" style="display: none;">
@@ -290,20 +266,16 @@
             </div>
         </div>
 
-        <!-- 本地音频 -->
         <audio id="bgm" src="pepper.mp3" preload="auto"></audio>
 
-        <!-- 留言板 -->
         <div class="content-area message-board" id="messageBoard">
             <div style="color:#444;text-align:center;padding:60px 0;font-size:13px;">暂无留言</div>
         </div>
 
-        <!-- 备忘录 -->
         <div class="content-area memo-board" id="memoBoard">
             <div style="color:#444;text-align:center;padding:60px 0;font-size:13px;">暂无便签</div>
         </div>
 
-        <!-- 输入区 -->
         <div class="input-row" id="inputRow">
             <input type="text" id="messageInput" placeholder="说点什么..." maxlength="500" />
             <button id="sendBtn" onclick="sendItem()">发送</button>
@@ -317,7 +289,7 @@
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getDatabase, ref, push, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { getDatabase, ref, push, onValue, remove, set } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyC4t7z-gj04cmuytgZpN2WiAIevNOXx60w",
@@ -333,6 +305,7 @@
         const db = getDatabase(app);
         const messagesRef = ref(db, 'messages');
         const memosRef = ref(db, 'memos');
+        const electricityRef = ref(db, 'electricity/total');
 
         const statusEl = document.getElementById('status');
         let currentMode = 'message';
@@ -350,7 +323,7 @@
             statusEl.className = 'status';
         });
 
-        // ==================== 实时监听备忘录 ====================
+        // ==================== 实时监听便签 ====================
         onValue(memosRef, (snapshot) => {
             const data = snapshot.val();
             const memos = data ? Object.entries(data).map(([key, val]) => ({ key, ...val })) : [];
@@ -373,11 +346,11 @@
             `).join('');
         }
 
-        // ==================== 渲染备忘录 ====================
+        // ==================== 渲染便签 ====================
         function renderMemos(memos) {
             const list = document.getElementById('memoBoard');
             if (memos.length === 0) {
-                list.innerHTML = '<div style="color:#444;text-align:center;padding:60px 0;font-size:13px;">还没有备忘录，记点什么吧</div>';
+                list.innerHTML = '<div style="color:#444;text-align:center;padding:60px 0;font-size:13px;">还没有便签，记点什么吧</div>';
                 return;
             }
             list.innerHTML = memos.map(memo => `
@@ -387,12 +360,10 @@
                 </div>
             `).join('');
 
-            // 绑定点击复制
             list.querySelectorAll('.memo-text').forEach(el => {
                 el.addEventListener('click', function() {
                     const feedback = this.querySelector('.copy-feedback');
                     const text = this.textContent.replace('已复制！', '').trim();
-                    
                     if (navigator.clipboard && navigator.clipboard.writeText) {
                         navigator.clipboard.writeText(text).then(() => {
                             feedback.classList.add('show');
@@ -406,7 +377,6 @@
                 });
             });
 
-            // 绑定删除按钮
             list.querySelectorAll('.memo-delete').forEach(btn => {
                 btn.addEventListener('click', function() {
                     const key = this.getAttribute('data-key');
@@ -441,7 +411,6 @@
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
             if (!text) return;
-
             if (currentMode === 'message') {
                 push(messagesRef, {
                     text: text,
@@ -454,7 +423,6 @@
                     timestamp: Date.now()
                 });
             }
-
             input.value = '';
             input.focus();
         };
@@ -468,7 +436,6 @@
             const boardMemo = document.getElementById('memoBoard');
             const input = document.getElementById('messageInput');
             const sendBtn = document.getElementById('sendBtn');
-
             if (mode === 'message') {
                 tabMsg.classList.add('active');
                 tabMemo.classList.remove('active');
@@ -494,10 +461,16 @@
 
         window.togglePlay = function() {
             if (bgm.paused) {
-                bgm.play();
-                playBtn.classList.add('playing');
-                playIcon.style.display = 'none';
-                pauseIcon.style.display = 'flex';
+                const promise = bgm.play();
+                if (promise !== undefined) {
+                    promise.then(() => {
+                        playBtn.classList.add('playing');
+                        playIcon.style.display = 'none';
+                        pauseIcon.style.display = 'flex';
+                    }).catch(err => {
+                        console.log('播放失败:', err);
+                    });
+                }
             } else {
                 bgm.pause();
                 playBtn.classList.remove('playing');
@@ -512,16 +485,42 @@
             pauseIcon.style.display = 'none';
         });
 
-        // ==================== 电费计数器 ====================
+        // ==================== 云端电费计数器 ====================
         const costEl = document.getElementById('electricityCost');
-        const startTime = Date.now();
         const wattsPerSecond = 0.00000012;
+        let cloudTotal = 0;
+        let localStartTime = Date.now();
+
+        onValue(electricityRef, (snapshot) => {
+            const data = snapshot.val();
+            cloudTotal = data || 0;
+            costEl.textContent = `本网页已产生 ¥${cloudTotal.toFixed(6)} 电费`;
+        });
 
         setInterval(() => {
-            const elapsed = (Date.now() - startTime) / 1000;
-            const cost = elapsed * wattsPerSecond;
-            costEl.textContent = `本网页已产生 ¥${cost.toFixed(6)} 电费`;
+            const elapsed = (Date.now() - localStartTime) / 1000;
+            const currentTotal = cloudTotal + elapsed * wattsPerSecond;
+            costEl.textContent = `本网页已产生 ¥${currentTotal.toFixed(6)} 电费`;
         }, 1000);
+
+        setInterval(() => {
+            const elapsed = (Date.now() - localStartTime) / 1000;
+            const increment = elapsed * wattsPerSecond;
+            cloudTotal += increment;
+            localStartTime = Date.now();
+            set(electricityRef, cloudTotal);
+        }, 30000);
+
+        window.addEventListener('beforeunload', () => {
+            const elapsed = (Date.now() - localStartTime) / 1000;
+            const increment = elapsed * wattsPerSecond;
+            const finalTotal = cloudTotal + increment;
+            const blob = new Blob([JSON.stringify(finalTotal)], { type: 'application/json' });
+            navigator.sendBeacon(
+                'https://project-99373354443591401-default-rtdb.asia-southeast1.firebasedatabase.app/electricity/total.json',
+                blob
+            );
+        });
 
         // ==================== 彩蛋 ====================
         window.titleBounce = function() {
